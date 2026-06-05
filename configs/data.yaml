@@ -1,0 +1,17 @@
+# Dataset configuration for Yandex Yambda
+# https://huggingface.co/datasets/yandex/yambda
+
+repo_id: yandex/yambda
+size: "50m"          # one of: 50m, 500m, 5b
+format: flat         # one of: flat, sequential
+events:              # interaction subsets to download
+  - likes
+  - listens
+
+paths:
+  raw: data/raw      # downloaded parquet files (gitignored)
+  sample: data/sample # tiny committed smoke-test subset
+
+sample:
+  n_users: 200       # users kept in the smoke-test sample
+  seed: 42
