@@ -7,15 +7,20 @@ Usage
 -----
     from src.training.experiment import get_experiment, start_run, log_metrics
 
-    get_experiment()          # idempotent; call once at the top of a training script
+    get_experiment()   # sets tracking URI + experiment; call once per script
     with start_run("two-tower-v1", params={"embedding_dim": 64}) as run:
         for step, loss in enumerate(train()):
             log_metrics({"train_loss": loss}, step=step)
 
+    # Nested runs (e.g. hyperparameter sweep):
+    with start_run("sweep") as outer:
+        with start_run("trial-1", nested=True, params={"lr": 1e-3}) as inner:
+            log_metrics({"val_loss": 0.4}, step=0)
+
 Smoke test
 ----------
     python -m src.training.experiment
-    mlflow ui --port 5001
+    mlflow ui --port 5001 --backend-store-uri sqlite:///mlflow.db
 """
 
 from __future__ import annotations
@@ -29,20 +34,44 @@ import yaml
 
 _DEFAULT_CONFIG = Path(__file__).parent.parent.parent / "configs" / "mlflow.yaml"
 
+_REQUIRED_KEYS = ("experiment_name", "tracking_uri")
+
 
 def _load_config(config_path: str | Path = _DEFAULT_CONFIG) -> dict:
-    with open(config_path) as f:
-        return yaml.safe_load(f)
+    path = Path(config_path)
+    if not path.exists():
+        raise FileNotFoundError(f"MLflow config not found: {path}")
+    with open(path) as f:
+        cfg = yaml.safe_load(f)
+    if not cfg:
+        raise ValueError(f"MLflow config is empty: {path}")
+    missing = [k for k in _REQUIRED_KEYS if k not in cfg]
+    if missing:
+        raise KeyError(f"MLflow config {path} missing keys: {missing}")
+    return cfg
+
+
+def _resolve_tracking_uri(uri: str, config_path: Path) -> str:
+    """Resolve a relative sqlite:/// path to absolute, anchored at project root."""
+    if not uri.startswith("sqlite:///"):
+        return uri
+    db = Path(uri[len("sqlite:///"):])
+    if db.is_absolute():
+        return uri
+    # config lives at <root>/configs/mlflow.yaml — parent.parent = project root
+    return "sqlite:///" + str(config_path.resolve().parent.parent / db)
 
 
 def get_experiment(config_path: str | Path = _DEFAULT_CONFIG) -> str:
     """Configure MLflow tracking and return the experiment ID.
 
-    Creates the experiment if it does not already exist. Safe to call multiple
-    times (mlflow.set_experiment is idempotent).
+    Creates the experiment if it does not already exist. Call once per script
+    before any start_run() calls.
     """
+    config_path = Path(config_path)
     cfg = _load_config(config_path)
-    mlflow.set_tracking_uri(cfg["tracking_uri"])
+    uri = _resolve_tracking_uri(cfg["tracking_uri"], config_path)
+    mlflow.set_tracking_uri(uri)
     experiment = mlflow.set_experiment(cfg["experiment_name"])
     return experiment.experiment_id
 
@@ -52,14 +81,16 @@ def start_run(
     run_name: str,
     params: dict[str, Any] | None = None,
     tags: dict[str, str] | None = None,
-    config_path: str | Path = _DEFAULT_CONFIG,
+    nested: bool = False,
 ):
     """Context manager that opens an MLflow run, logs params/tags, then closes it.
 
-    Yields the active ``mlflow.ActiveRun`` so callers can access ``run.info``.
+    Requires get_experiment() to have been called first to set the tracking URI
+    and experiment. Yields the active ``mlflow.ActiveRun``.
+
+    Pass ``nested=True`` for inner runs in hyperparameter sweeps or CV loops.
     """
-    get_experiment(config_path)
-    with mlflow.start_run(run_name=run_name, tags=tags) as run:
+    with mlflow.start_run(run_name=run_name, tags=tags, nested=nested) as run:
         if params:
             mlflow.log_params(params)
         yield run
@@ -77,7 +108,9 @@ def log_metrics(metrics: dict[str, float], step: int | None = None) -> None:
 if __name__ == "__main__":
     cfg = _load_config()
     print(f"Experiment : {cfg['experiment_name']}")
-    print(f"Tracking UI: mlflow ui --port 5001 --backend-store-uri {cfg['tracking_uri']}\n")
+    print(f"Tracking UI: mlflow ui --port 5001 --backend-store-uri sqlite:///mlflow.db\n")
+
+    get_experiment()
 
     with start_run(
         "smoke-test",
@@ -90,7 +123,6 @@ if __name__ == "__main__":
         },
         tags={"stage": "smoke", "dataset": "yambda-50m"},
     ) as run:
-        # Simulate a few training steps
         for step in range(3):
             log_metrics(
                 {
@@ -100,7 +132,6 @@ if __name__ == "__main__":
                 step=step,
             )
         print(f"Run ID : {run.info.run_id}")
-        print(f"Status : {run.info.status}")
 
     print("\nDone. Open the MLflow UI to inspect the run:")
-    print("  mlflow ui --port 5001")
+    print("  mlflow ui --port 5001 --backend-store-uri sqlite:///mlflow.db")

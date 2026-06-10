@@ -48,6 +48,11 @@ from src.training.experiment import get_experiment, start_run, log_metrics
 get_experiment()   # sets tracking URI + experiment; call once per script
 with start_run("my-run", params={"embedding_dim": 64}) as run:
     log_metrics({"train_loss": 0.5}, step=0)
+
+# Nested run (hyperparameter sweep, CV loop):
+with start_run("sweep") as outer:
+    with start_run("trial-1", nested=True, params={"lr": 1e-3}) as inner:
+        log_metrics({"val_loss": 0.4}, step=0)
 ```
 
 Config is in `configs/mlflow.yaml` (experiment name, tracking URI).
