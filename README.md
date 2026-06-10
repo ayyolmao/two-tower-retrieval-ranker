@@ -83,7 +83,7 @@ This checklist mirrors the project's phased task plan and doubles as a progress 
 - [x] Create GitHub repo
 - [x] Write README + project goal
 - [x] Dataset download / load scripts
-- [ ] Set up tooling (PyTorch, MLflow, Docker, FastAPI, FAISS)
+- [x] Set up tooling (PyTorch 2.12, MLflow 3.13, FAISS 1.14, FastAPI 0.136, XGBoost 3.2)
 - [ ] Read *Deep Neural Networks for YouTube Recommendations* + *Sampling-Bias-Corrected Neural Two-Tower* papers
 - [ ] Skim Eugene Yan — *Patterns for Personalization*
 
