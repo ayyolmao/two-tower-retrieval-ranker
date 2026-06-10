@@ -41,6 +41,27 @@ explicit and measured.
                      (served via FastAPI /recommendations/{user_id})
 ```
 
+### Training objective
+
+The two towers are trained jointly with **in-batch softmax cross-entropy**: each
+positive (user, item) pair treats every other item in the batch as a hard negative.
+The retrieval score is the **dot product of L2-normalised** user and item embeddings.
+This mirrors the approach in the YouTube DNN and Sampling-Bias-Corrected Two-Tower papers.
+
+### Feature inputs (Phase 1 scope)
+
+| Tower | Features |
+|---|---|
+| **User** | `uid` embedding · mean-pooled listen-history item embeddings |
+| **Item** | `item_id` embedding · (optional) Yambda audio embedding |
+
+### Ranker inputs
+
+Stage 2 receives the top-K candidates from the ANN index plus a feature vector
+(retrieval score, user/item embeddings, interaction features) and re-ranks them via
+**XGBoost LambdaMART** (default) or **DCN-v2** (cross-network variant). Output is a
+ranked list served by FastAPI.
+
 ## Dataset
 
 **[Yandex Yambda](https://huggingface.co/datasets/yandex/yambda)** — Yandex Music
@@ -88,7 +109,7 @@ This checklist mirrors the project's phased task plan and doubles as a progress 
 - [ ] Skim Eugene Yan — *Patterns for Personalization*
 
 ### Phase 1 — Two-Tower Retrieval + Ranker
-- [ ] Architecture outline + MLflow experiment setup
+- [x] Architecture outline + MLflow experiment setup
 - [ ] Metrics: Recall@K, NDCG@K, MRR@K
 - [ ] Popularity + matrix-factorization baselines
 - [ ] Time-based train / validation / test split
@@ -108,12 +129,16 @@ This checklist mirrors the project's phased task plan and doubles as a progress 
 .
 ├── README.md
 ├── requirements.txt
+├── requirements-lock.txt   # exact pinned versions (pip freeze)
 ├── configs/
-│   └── data.yaml          # dataset size, events, paths, sample config
+│   ├── data.yaml           # dataset size, events, paths, sample config
+│   └── mlflow.yaml         # experiment name + tracking URI
 ├── src/
-│   └── data/
-│       ├── download.py     # download Yambda subsets from HF Hub
-│       └── load.py         # load parquet + build smoke-test sample
+│   ├── data/
+│   │   ├── download.py     # download Yambda subsets from HF Hub
+│   │   └── load.py         # load parquet + build smoke-test sample
+│   └── training/
+│       └── experiment.py   # MLflow helpers: get_experiment, start_run, log_metrics
 ├── data/                   # downloads gitignored; data/sample/ committed
 └── notebooks/              # EDA (coming soon)
 ```
