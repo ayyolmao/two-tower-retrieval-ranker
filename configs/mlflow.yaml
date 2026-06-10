@@ -1,0 +1,3 @@
+experiment_name: two-tower-retrieval-ranker
+tracking_uri: sqlite:///mlflow.db   # MLflow 3.x requires a DB backend locally
+artifact_location: null             # defaults to ./mlartifacts/

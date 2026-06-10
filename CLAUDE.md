@@ -29,6 +29,34 @@ mlflow ui --port 5001
 # Opens at http://127.0.0.1:5001
 ```
 
+## MLflow experiment tracking
+
+```bash
+# Smoke-test: creates one dummy run in the two-tower-retrieval-ranker experiment
+python -m src.training.experiment
+
+# Open the UI to inspect the run (experiment name: two-tower-retrieval-ranker)
+mlflow ui --port 5001 --backend-store-uri sqlite:///mlflow.db
+# → http://127.0.0.1:5001
+```
+
+Training scripts should use the helpers in `src/training/experiment.py`:
+
+```python
+from src.training.experiment import get_experiment, start_run, log_metrics
+
+get_experiment()   # sets tracking URI + experiment; call once per script
+with start_run("my-run", params={"embedding_dim": 64}) as run:
+    log_metrics({"train_loss": 0.5}, step=0)
+
+# Nested run (hyperparameter sweep, CV loop):
+with start_run("sweep") as outer:
+    with start_run("trial-1", nested=True, params={"lr": 1e-3}) as inner:
+        log_metrics({"val_loss": 0.4}, step=0)
+```
+
+Config is in `configs/mlflow.yaml` (experiment name, tracking URI).
+
 ## Data pipeline commands
 
 ```bash
@@ -64,7 +92,7 @@ Flat schema: `uid` (uint32), `item_id` (uint32), `timestamp` (uint32, 5s bins), 
 
 ## Project status
 
-Phase 0 (setup): data download/load scripts done; ML toolchain (PyTorch 2.12, MLflow 3.13, FAISS 1.14, FastAPI 0.136, XGBoost 3.2) installed and verified. Modeling (Phase 1) not started yet.
+Phase 0 complete. Phase 1 in progress: architecture outline and MLflow experiment helper are done; metrics, baselines, and model code not started yet.
 
 ## Evaluation targets
 
