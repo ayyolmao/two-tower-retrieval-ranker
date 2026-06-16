@@ -15,3 +15,10 @@ paths:
 sample:
   n_users: 200       # users kept in the smoke-test sample
   seed: 42
+
+preprocess:
+  k: 5               # min interactions per user and per item (k-core threshold)
+  processed: data/processed
+  train_frac: 0.8
+  val_frac: 0.1      # test_frac = 0.1 implicitly
+  play_threshold: 50  # listens only: min played_ratio_pct to be label=1
