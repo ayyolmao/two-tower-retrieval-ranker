@@ -19,6 +19,7 @@ sample:
 preprocess:
   k: 5               # min interactions per user and per item (k-core threshold)
   processed: data/processed
-  train_frac: 0.8
-  val_frac: 0.1      # test_frac = 0.1 implicitly
+  split_strategy: user_time  # user_time (per-user leave-one-out) | global_time (chronological cut)
+  train_frac: 0.8    # global_time only
+  val_frac: 0.1      # global_time only; test_frac = 0.1 implicitly
   play_threshold: 50  # listens only: min played_ratio_pct to be label=1
