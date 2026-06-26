@@ -90,9 +90,16 @@ Flat schema: `uid` (uint32), `item_id` (uint32), `timestamp` (uint32, 5s bins), 
 
 `configs/data.yaml` controls dataset size, events, raw/sample paths, and sample parameters (`n_users`, `seed`). The loaders in `src/data/` use these values as defaults but accept CLI overrides.
 
+## Running tests
+
+```bash
+pytest -q                        # full suite
+pytest tests/test_metrics.py -q  # just the metrics tests
+```
+
 ## Project status
 
-Phase 0 complete. Phase 1 in progress: architecture outline and MLflow experiment helper are done; metrics, baselines, and model code not started yet.
+Phase 0 complete. Phase 1 in progress: architecture outline, MLflow experiment helper, data preprocessing, and evaluation metrics (`src/eval/metrics.py`) are done; baselines and model code not started yet.
 
 ## Evaluation targets
 
