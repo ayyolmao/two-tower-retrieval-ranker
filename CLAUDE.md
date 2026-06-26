@@ -68,9 +68,18 @@ python -m src.data.load --event likes
 
 # Load a parquet file programmatically
 python -c "from src.data.load import load_interactions; print(load_interactions('likes').head())"
+
+# Preprocess into train/val/test splits (k-core → labels → time split → remap → save)
+python -m src.data.preprocess --event likes                          # per-user leave-one-out (default)
+python -m src.data.preprocess --event likes --split-strategy global_time --train-frac 0.8 --val-frac 0.1
 ```
 
 `data/raw/` is gitignored. `data/sample/` holds a 200-user deterministic subset committed to the repo so the pipeline is testable without a full download.
+
+Splits are **time-based** (never random) to avoid leakage. Default `user_time` holds out
+each user's most recent interaction for test and 2nd-most-recent for val (leave-one-out);
+`global_time` cuts the whole timeline at fractions. Each run writes `{event}_split_meta.json`
+documenting the cutoffs (per-user holdout timestamps, or global boundaries).
 
 ## Architecture
 
@@ -103,4 +112,4 @@ Phase 0 complete. Phase 1 in progress: architecture outline, MLflow experiment h
 
 ## Evaluation targets
 
-Recall@100, NDCG@10, MRR@10 (full pipeline). Baselines: popularity and matrix factorization. Splits: time-based. Ablations: embedding dim (32/64/128), negative sampling strategy, user-history length.
+Recall@100, NDCG@10, MRR@10 (full pipeline). Baselines: popularity and matrix factorization. Splits: time-based (per-user leave-one-out by default). Ablations: embedding dim (32/64/128), negative sampling strategy, user-history length.
