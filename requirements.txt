@@ -15,3 +15,6 @@ fastapi>=0.111
 uvicorn[standard]>=0.30
 xgboost>=2.1           # 2.1+ has Python 3.13 wheels
 scikit-learn>=1.5
+
+# --- Testing ---
+pytest>=8.0
