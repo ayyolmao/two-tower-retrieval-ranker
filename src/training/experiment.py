@@ -97,8 +97,13 @@ def start_run(
 
 
 def log_metrics(metrics: dict[str, float], step: int | None = None) -> None:
-    """Log a dict of scalar metrics to the active MLflow run."""
-    mlflow.log_metrics(metrics, step=step)
+    """Log a dict of scalar metrics to the active MLflow run.
+
+    '@' in metric names is replaced with '_at_' before logging — MLflow
+    rejects '@' in metric keys (e.g. 'recall@100' → 'recall_at_100').
+    """
+    sanitised = {k.replace("@", "_at_"): v for k, v in metrics.items()}
+    mlflow.log_metrics(sanitised, step=step)
 
 
 # ---------------------------------------------------------------------------

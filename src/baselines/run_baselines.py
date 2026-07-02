@@ -28,6 +28,7 @@ import pandas as pd
 
 from src.baselines.mf import MFBaseline
 from src.baselines.popularity import PopularityBaseline
+from src.data.preprocess import _processed_path, _split_meta_path, _vocab_path
 from src.eval.metrics import evaluate
 from src.training.experiment import get_experiment, log_metrics, start_run
 
@@ -43,7 +44,7 @@ def _check_split_strategy(event: str, size: str, fmt: str, root: str | Path) -> 
     which is also evaluated under LOO. Global-time splits produce different
     relevant-set sizes per user, making Recall@100 incomparable across models.
     """
-    meta_path = Path(root) / fmt / size / f"{event}_split_meta.json"
+    meta_path = _split_meta_path(event, size, fmt, root)
     if not meta_path.exists():
         raise RuntimeError(
             f"No split_meta.json found at {meta_path}. "
@@ -68,11 +69,10 @@ def _load_splits(
     root: str | Path = "data/processed",
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict]:
     """Load train/val/test parquets and vocab JSON."""
-    base = Path(root) / fmt / size
-    train = pd.read_parquet(base / f"{event}_train.parquet")
-    val   = pd.read_parquet(base / f"{event}_val.parquet")
-    test  = pd.read_parquet(base / f"{event}_test.parquet")
-    vocab = json.loads((base / f"{event}_vocab.json").read_text())
+    train = pd.read_parquet(_processed_path(event, "train", size, fmt, root))
+    val   = pd.read_parquet(_processed_path(event, "val",   size, fmt, root))
+    test  = pd.read_parquet(_processed_path(event, "test",  size, fmt, root))
+    vocab = json.loads(_vocab_path(event, size, fmt, root).read_text())
     return train, val, test, vocab
 
 
@@ -188,17 +188,11 @@ def run(
                 val_metrics  = _evaluate_model(model, val_users,  val_relevant,  seen_by_user)
                 test_metrics = _evaluate_model(model, test_users, test_relevant, seen_by_user)
 
-                # MLflow forbids '@' in metric names; replace with '_at_'.
-                # The all_results dict keeps the original keys for the printed table.
-                mlflow_metrics = {
-                    **{f"val/{k.replace('@', '_at_')}": v  for k, v in val_metrics.items()},
-                    **{f"test/{k.replace('@', '_at_')}": v for k, v in test_metrics.items()},
-                }
                 display_metrics = {
                     **{f"val/{k}": v  for k, v in val_metrics.items()},
                     **{f"test/{k}": v for k, v in test_metrics.items()},
                 }
-                log_metrics(mlflow_metrics, step=0)
+                log_metrics(display_metrics, step=0)  # log_metrics sanitises '@' internally
                 all_results[model_name] = display_metrics
 
     # --- Print table ---

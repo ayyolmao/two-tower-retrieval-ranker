@@ -23,6 +23,8 @@ Usage
 
 from __future__ import annotations
 
+from itertools import islice
+
 import pandas as pd
 
 
@@ -31,13 +33,13 @@ class PopularityBaseline:
 
     Attributes
     ----------
-    top_items : list[int]
+    top_items : list[int] | None
         Item indices sorted descending by number of label=1 training rows.
-        Set by :meth:`fit`.
+        None until :meth:`fit` is called.
     """
 
     def __init__(self) -> None:
-        self.top_items: list[int] = []
+        self.top_items: list[int] | None = None
 
     def fit(self, train_df: pd.DataFrame) -> None:
         """Build the global popularity ranking from training interactions.
@@ -56,8 +58,16 @@ class PopularityBaseline:
     ) -> list[int]:
         """Return up to n items, skipping anything the user saw in training.
 
+        Uses islice to stop iteration as soon as n unseen items are found,
+        avoiding a full O(vocab_size) scan when only n << vocab_size items
+        are needed.
+
         Excluding seen items matters for fair comparison: the neural two-tower
         also filters training positives from its candidate set.
         """
-        recs = [item for item in self.top_items if item not in seen_items]
-        return recs[:n]
+        if self.top_items is None:
+            raise RuntimeError("PopularityBaseline.recommend() called before fit()")
+        return list(islice(
+            (item for item in self.top_items if item not in seen_items),
+            n,
+        ))

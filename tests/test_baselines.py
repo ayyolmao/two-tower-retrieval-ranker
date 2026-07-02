@@ -115,6 +115,11 @@ class TestPopularityBaseline:
         model.fit(TRAIN_DF)
         assert model.recommend(0, n=3) == model.recommend(99, n=3)
 
+    def test_unfitted_model_raises(self):
+        model = PopularityBaseline()
+        with pytest.raises(RuntimeError, match="fit()"):
+            model.recommend(0, n=5)
+
 
 # ---------------------------------------------------------------------------
 # MFBaseline
