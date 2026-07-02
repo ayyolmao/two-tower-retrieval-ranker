@@ -16,5 +16,9 @@ uvicorn[standard]>=0.30
 xgboost>=2.1           # 2.1+ has Python 3.13 wheels
 scikit-learn>=1.5
 
+# --- Baselines ---
+implicit>=0.7          # ALS / BPR for implicit feedback MF
+scipy>=1.11            # sparse matrices for implicit ALS
+
 # --- Testing ---
 pytest>=8.0
