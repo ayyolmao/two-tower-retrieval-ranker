@@ -27,3 +27,6 @@ artifacts/
 .DS_Store
 .idea/
 .vscode/
+
+# Claude Code instructions (local dev guidance, not for public repo)
+CLAUDE.md
